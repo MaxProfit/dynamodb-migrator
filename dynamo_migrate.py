@@ -3,7 +3,7 @@ import constant
 
 class DynamoMigrator:
     def __create_dynamo_client(self, access_key, access_key_secret, session_token):
-        if access_key is None and access_key_secret is None and session_token is None:
+        if access_key is None or access_key_secret is None:
             return boto3.client(constant.DYNAMODB)
         elif session_token is None:
             return boto3.client(constant.DYNAMODB,
