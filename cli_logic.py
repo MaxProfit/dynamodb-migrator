@@ -19,24 +19,53 @@ def main(verbose, feed_aws_creds, using_temp_creds):
 
     if feed_aws_creds:
         aws_access_key_id = click.prompt(constant.ACCESS_KEY_PROMPT, type=str)
-        aws_secret_access_key = click.prompt(constant.SECRET_ACCESS_KEY_PROMPT, type=str)
+        aws_secret_access_key = click.prompt(constant.SECRET_ACCESS_KEY_PROMPT, 
+                                             type=str)
         if using_temp_creds:
-            aws_session_token = click.prompt(constant.SESSION_ID_PROMPT, type=str)
+            aws_session_token = click.prompt(constant.SESSION_ID_PROMPT, 
+                                             type=str)
     # if verbose:
     #     click.echo("so I hear you're from {}".format("Ireland"))
 
     old_name = click.prompt(constant.OLD_NAME_PROMPT, type=str)
     new_name = click.prompt(constant.NEW_NAME_PROMPT, type=str)
 
-    ckl = dynamo_migrate.DynamoMigrator(old_name, 
-                                        new_name, 
-                                        aws_access_key_id,
-                                        aws_secret_access_key,
-                                        aws_session_token)
+    dynamo_migrator = dynamo_migrate.DynamoMigrator(old_name, 
+                                                    new_name, 
+                                                    aws_access_key_id,
+                                                    aws_secret_access_key,
+                                                    aws_session_token)
 
-    old_table_tuples = ckl.get_old_table_configuration()
-    print(json.dumps(old_table_tuples[0], indent=4, sort_keys=True, default=str))
-    print(json.dumps(old_table_tuples[1], indent=4, sort_keys=True, default=str))
+    secondary_indexes = dynamo_migrator.get_old_table_configuration()
+    print(json.dumps(secondary_indexes, indent=4, sort_keys=True, default=str))
+
+    lsi = click.prompt("Which LSI would you like to modify today?", type=str)
+    obj_to_modify = None
+    for lsi_obj in secondary_indexes:
+        if lsi == lsi_obj["IndexName"]:
+            obj_to_modify = lsi_obj
+            break
+        else:
+            for key in lsi_obj["KeySchema"]:
+                if key["AttributeName"] == lsi:
+                    obj_to_modify = lsi_obj
+                    break
+    
+    action = None
+    if obj_to_modify is None:
+        if click.confirm("Would you like to create a new index for that?"):
+            action = dynamo_migrate.Action.CREATE
+    else:
+        json.dumps(obj_to_modify, indent=4, sort_keys=True, default=str)
+        if click.confirm("Would you like to delete this index?"):
+            action = dynamo_migrate.Action.DELETE
+    
+    if action is dynamo_migrate.Action.CREATE:
+        click.echo("CREATING!")
+    elif action is dynamo_migrate.Action.DELETE:
+        click.echo("DELETING!")
+
+
 
 if __name__ == '__main__':
     main()

@@ -1,8 +1,14 @@
 import boto3
 import constant
+from enum import Enum
+
+class Action(Enum):
+    CREATE = 1
+    DELETE = 2
 
 class DynamoMigrator:
-    def __create_dynamo_client(self, access_key, access_key_secret, session_token):
+    def __create_dynamo_client(self, access_key, 
+                               access_key_secret, session_token):
         if access_key is None or access_key_secret is None:
             return boto3.client(constant.DYNAMODB)
         elif session_token is None:
@@ -24,10 +30,14 @@ class DynamoMigrator:
                                                   aws_session_token)
 
     def get_old_table_configuration(self):
-        old_table_desc = self.client.describe_table(TableName=self.old_table_name)
+        old_table_desc = self.client.describe_table(
+            TableName=self.old_table_name
+        )
+        
         local_secondary_indexes = old_table_desc["Table"]["LocalSecondaryIndexes"]
-        key_schema = old_table_desc["Table"]["KeySchema"]
-        return local_secondary_indexes, key_schema
+        # key_schema = old_table_desc["Table"]["KeySchema"]
+        # return local_secondary_indexes, key_schema
+        return local_secondary_indexes
 
     def create_new_table(self):
         return self.client.create_table(
